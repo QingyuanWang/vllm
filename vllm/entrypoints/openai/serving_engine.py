@@ -753,6 +753,12 @@ class OpenAIServing:
                 prompt_embeds=request_prompt_embeds["prompt_embeds"])
             for request_prompt_embeds in request_prompts_embeds
         ]
+        # Enable cache_salt for compelation
+        if hasattr(request, "cache_salt") and request.cache_salt is not None:
+            for engine_prompt in engine_prompts_text:
+                engine_prompt["cache_salt"] = request.cache_salt
+            for engine_prompt in engine_prompts_embeds:
+                engine_prompt["cache_salt"] = request.cache_salt
 
         request_prompts = request_prompts_embeds + request_prompts_text
         engine_prompts = engine_prompts_embeds + engine_prompts_text
