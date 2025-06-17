@@ -1107,6 +1107,15 @@ class CompletionRequest(OpenAIBaseModel):
         description=("Additional request parameters with string or "
                      "numeric values, used by custom extensions."),
     )
+    cache_salt: Optional[str] = Field(
+        default=None,
+        description=(
+            "If specified, the prefix cache will be salted with the provided "
+            "string to prevent an attacker to guess prompts in multi-user "
+            "environments. The salt should be random, protected from "
+            "access by 3rd parties, and long enough to be "
+            "unpredictable (e.g., 43 characters base64-encoded, corresponding "
+            "to 256 bit). Not supported by vLLM engine V0."))
 
     # --8<-- [end:completion-extra-params]
 
