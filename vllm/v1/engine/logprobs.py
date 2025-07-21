@@ -12,7 +12,7 @@ from vllm.transformers_utils.detokenizer_utils import (
     AnyTokenizer, convert_ids_list_to_tokens)
 from vllm.v1.engine import EngineCoreOutput, EngineCoreRequest
 from vllm.v1.outputs import LogprobsLists, LogprobsTensors
-
+from datetime import datetime
 logger = init_logger(__name__)
 
 NONES = itertools.repeat(None)
@@ -92,6 +92,7 @@ class LogprobsProcessor:
     def _update_prompt_logprobs(
         self,
         prompt_logprobs_tensors: LogprobsTensors,
+        num_cached_tokens:int
     ) -> None:
         """Update with prompt logprobs from EngineCore.
 
@@ -100,7 +101,6 @@ class LogprobsProcessor:
                                    tensors.
 
         """
-
         # Prompt logprobs are enabled.
         assert self.num_prompt_logprobs is not None
         assert self.prompt_logprobs is not None
@@ -109,10 +109,10 @@ class LogprobsProcessor:
 
         # Detokenize non-incrementally.
         # Output is flat: [num_tok, num_lps] -> [num_tok * num_lps]
-        decoded_tokens = None if self.tokenizer is None else (
-            convert_ids_list_to_tokens(self.tokenizer,
-                                       token_ids.flatten().tolist()))
-
+        # decoded_tokens = None if self.tokenizer is None else (
+        #     convert_ids_list_to_tokens(self.tokenizer,
+        #                                token_ids.flatten().tolist()))
+        decoded_tokens = None
         # Recover shapes.
         num_prompt_tokens, num_logprobs = logprobs.shape
 
@@ -120,9 +120,9 @@ class LogprobsProcessor:
         prompt_token_ranks = ranks.tolist()
         prompt_logprobs = logprobs.tolist()
         token_ids = token_ids.tolist()
-
+        self.prompt_logprobs.extend([None]*(num_cached_tokens))
         # Make Logprob for each position.
-        for pos in range(num_prompt_tokens):
+        for pos in range(num_cached_tokens, num_prompt_tokens):
             # Handle flattening.
             offset = pos * num_logprobs
             offset_end = offset + num_logprobs
@@ -135,6 +135,7 @@ class LogprobsProcessor:
                                         decoded_tokens_for_pos,
                                         prompt_token_ranks[pos],
                                         self.num_prompt_logprobs))
+        
 
     def pop_prompt_logprobs(self) -> Optional[PromptLogprobs]:
         """Pop and return all request prompt logprobs
@@ -194,8 +195,8 @@ class LogprobsProcessor:
                 logprob_token_ids, logprobs, ranks, decoded_tokens)
         }
 
-    def update_from_output(self, output: EngineCoreOutput) -> None:
+    def update_from_output(self, output: EngineCoreOutput, num_cached_tokens:int) -> None:
         if output.new_logprobs is not None:
             self._update_sample_logprobs(output.new_logprobs)
         if output.new_prompt_logprobs_tensors is not None:
-            self._update_prompt_logprobs(output.new_prompt_logprobs_tensors)
+            self._update_prompt_logprobs(output.new_prompt_logprobs_tensors, num_cached_tokens)
