@@ -17,7 +17,7 @@ from vllm.v1.engine.parallel_sampling import ParentRequest
 from vllm.v1.metrics.stats import (IterationStats, LoRARequestStates,
                                    RequestStateStats)
 
-
+from datetime import datetime
 class RequestOutputCollector:
     """
     Collects streamed RequestOutputs per individual request,
@@ -325,7 +325,6 @@ class OutputProcessor:
         If you need to touch every element of the batch, do it from
         within the loop below.
         """
-
         request_outputs: list[RequestOutput] = []
         reqs_to_abort: list[str] = []
         for engine_core_output in engine_core_outputs:
@@ -355,7 +354,7 @@ class OutputProcessor:
                 stop_reason = stop_string
 
             # 3) Compute sample and prompt logprobs for request, if required.
-            req_state.logprobs_processor.update_from_output(engine_core_output)
+            req_state.logprobs_processor.update_from_output(engine_core_output, num_cached_tokens)
 
             # 4) Create and handle RequestOutput objects.
             if request_output := req_state.make_request_output(
@@ -383,9 +382,7 @@ class OutputProcessor:
                 # Track per-request stats
                 self._update_stats_from_finished(req_state, finish_reason,
                                                  iteration_stats)
-
         self.lora_states.update_iteration_stats(iteration_stats)
-
         return OutputProcessorOutput(
             request_outputs=request_outputs,
             reqs_to_abort=reqs_to_abort,
