@@ -41,3 +41,6 @@ class SamplingMetadata:
 
     # Loaded logits processors
     logitsprocs: LogitsProcessors
+
+    spec_decode_tol: torch.Tensor
+

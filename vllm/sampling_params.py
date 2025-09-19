@@ -197,6 +197,9 @@ class SamplingParams(
     generated token can complete the sequence."""
     _bad_words_token_ids: Optional[list[list[int]]] = None
 
+    # SpecDec with tolerance
+    spec_decode_tol: float = 0.0
+
     @staticmethod
     def from_optional(
         n: Optional[int] = 1,

@@ -167,6 +167,17 @@ class InputBatch:
         # IDs of requests which do not support spec decoding
         self.spec_decode_unsupported_reqs: set[str] = set()
 
+        # Spec decode tolerances
+        self.spec_decode_tol = torch.empty((max_num_reqs, ),
+                                 dtype=torch.float32,
+                                 device=device)
+        self.spec_decode_tol_cpu_tensor = torch.empty((max_num_reqs, ),
+                                            dtype=torch.float32,
+                                            device="cpu",
+                                            pin_memory=pin_memory)
+        self.spec_decode_tol_cpu = self.spec_decode_tol_cpu_tensor.numpy()
+        self.spec_decode_tol_reqs: set[str] = set()
+
         # Frequency penalty related data structures
         self.frequency_penalties = torch.empty((max_num_reqs, ),
                                                dtype=torch.float,
@@ -328,9 +339,13 @@ class InputBatch:
         self.block_table.add_row(request.block_ids, req_index)
 
         if sampling_params := request.sampling_params:
-            if (self.is_spec_decode
-                    and is_spec_decode_unsupported(sampling_params)):
-                self.spec_decode_unsupported_reqs.add(req_id)
+            if self.is_spec_decode:
+                    if is_spec_decode_unsupported(sampling_params):
+                        self.spec_decode_unsupported_reqs.add(req_id)
+                    else:
+                        self.spec_decode_tol_reqs.add(req_id)
+            self.spec_decode_tol_cpu[req_index] = min(sampling_params.spec_decode_tol,1-1e-8)
+
             if sampling_params.sampling_type == SamplingType.GREEDY:
                 # Avoid later division by zero.
                 self.temperature_cpu[req_index] = -1.0
@@ -460,6 +475,7 @@ class InputBatch:
         self.top_p_reqs.discard(req_id)
         self.top_k_reqs.discard(req_id)
         self.spec_decode_unsupported_reqs.discard(req_id)
+        self.spec_decode_tol_reqs.discard(req_id)
         self.frequency_penalties_reqs.discard(req_id)
         self.presence_penalties_reqs.discard(req_id)
         self.repetition_penalties_reqs.discard(req_id)
@@ -519,6 +535,8 @@ class InputBatch:
 
         self.temperature_cpu[i1], self.temperature_cpu[i2] = \
             self.temperature_cpu[i2], self.temperature_cpu[i1]
+        self.spec_decode_tol_cpu[i1], self.spec_decode_tol_cpu[i2] = \
+            self.spec_decode_tol_cpu[i2], self.spec_decode_tol_cpu[i1]
         self.top_p_cpu[i1], self.top_p_cpu[i2] = \
             self.top_p_cpu[i2], self.top_p_cpu[i1]
         self.top_k_cpu[i1], self.top_k_cpu[i2] = \
@@ -617,6 +635,7 @@ class InputBatch:
 
             self.temperature_cpu[empty_index] = self.temperature_cpu[
                 last_req_index]
+            self.spec_decode_tol_cpu[empty_index] = self.spec_decode_tol_cpu[last_req_index]
             self.top_p_cpu[empty_index] = self.top_p_cpu[last_req_index]
             self.top_k_cpu[empty_index] = self.top_k_cpu[last_req_index]
             self.frequency_penalties_cpu[
@@ -674,6 +693,8 @@ class InputBatch:
                                      self.temperature, num_reqs)
         else:
             temperature = None
+        if self.is_spec_decode:
+            copy_slice(self.spec_decode_tol_cpu_tensor, self.spec_decode_tol, num_reqs)
         if not self.no_top_p:
             copy_slice(self.top_p_cpu_tensor, self.top_p, num_reqs)
         if not self.no_top_k:
@@ -726,6 +747,7 @@ class InputBatch:
             allowed_token_ids_mask=allowed_token_ids_mask,
             bad_words_token_ids=self.bad_words_token_ids,
             logitsprocs=self.logitsprocs,
+            spec_decode_tol=self.spec_decode_tol,
         )
 
     def get_pooling_params(self) -> list[PoolingParams]:

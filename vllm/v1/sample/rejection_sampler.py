@@ -224,6 +224,7 @@ def rejection_sample(
         recovered_token_ids,
         uniform_probs,
         is_greedy,
+        sampling_metadata.spec_decode_tol,
         max_spec_len,
         vocab_size,
         NO_DRAFT_PROBS=draft_probs is None,
@@ -493,12 +494,14 @@ def rejection_random_sample_kernel(
     recovered_token_ids_ptr,  # [num_tokens]
     uniform_probs_ptr,  # [num_tokens]
     is_greedy_ptr,  # [batch_size]
+    spec_decode_tol_ptr,  # [batch_size]
     max_spec_len,
     vocab_size,
     NO_DRAFT_PROBS: tl.constexpr,
 ):
     req_idx = tl.program_id(0)
     is_greedy = tl.load(is_greedy_ptr + req_idx)
+    spec_decode_tol = tl.load(spec_decode_tol_ptr + req_idx)
     if is_greedy:
         # Early exit for greedy sampling requests.
         return
@@ -526,7 +529,7 @@ def rejection_random_sample_kernel(
             uniform_prob = tl.load(uniform_probs_ptr + start_idx + pos)
             # NOTE(woosuk): While the draft probability should never be 0,
             # we check it to avoid NaNs. If it happens to be 0, we reject.
-            if draft_prob > 0 and target_prob / draft_prob >= uniform_prob:
+            if draft_prob > 0 and target_prob / draft_prob / (1-spec_decode_tol) >= uniform_prob:
                 # Accept.
                 token_id = draft_token_id
             else:
