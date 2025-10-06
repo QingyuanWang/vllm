@@ -6,6 +6,8 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Optional
 
+import torch 
+
 from vllm.logger import init_logger
 from vllm.sequence import Logprob, PromptLogprobs, SampleLogprobs
 from vllm.transformers_utils.detokenizer_utils import (
@@ -28,6 +30,7 @@ class LogprobsProcessor:
     # Logprobs for this request
     logprobs: Optional[SampleLogprobs]
     prompt_logprobs: Optional[PromptLogprobs]
+    prompt_raw_logprobs: Optional[torch.Tensor]
     cumulative_logprob: Optional[float]
     num_logprobs: Optional[int]
     num_prompt_logprobs: Optional[int]
@@ -47,6 +50,7 @@ class LogprobsProcessor:
             logprobs=(None if num_logprobs is None else []),
             # NOTE: logprob of first prompt token is None.
             prompt_logprobs=(None if num_prompt_logprobs is None else [None]),
+            prompt_raw_logprobs=None,
             num_prompt_logprobs=num_prompt_logprobs,
             num_logprobs=num_logprobs,
         )
@@ -196,7 +200,10 @@ class LogprobsProcessor:
         }
 
     def update_from_output(self, output: EngineCoreOutput, num_cached_tokens:int) -> None:
+        self.prompt_raw_logprobs=output.new_prompt_raw_logprobs_tensors
+
         if output.new_logprobs is not None:
             self._update_sample_logprobs(output.new_logprobs)
         if output.new_prompt_logprobs_tensors is not None:
             self._update_prompt_logprobs(output.new_prompt_logprobs_tensors, num_cached_tokens)
+        

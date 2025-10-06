@@ -220,12 +220,14 @@ class RequestState:
             prompt_logprobs = self.logprobs_processor.pop_prompt_logprobs()
         else:
             prompt_logprobs = self.logprobs_processor.prompt_logprobs
+        prompt_raw_logprobs = self.logprobs_processor.prompt_raw_logprobs
 
         return RequestOutput(
             request_id=request_id,
             prompt=self.prompt,
             prompt_token_ids=self.prompt_token_ids,
             prompt_logprobs=prompt_logprobs,
+            prompt_raw_logprobs=prompt_raw_logprobs,
             outputs=cast(list[CompletionOutput], outputs),
             finished=finished,
             kv_transfer_params=kv_transfer_params,

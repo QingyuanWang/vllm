@@ -103,6 +103,7 @@ class EngineCoreOutput(
 
     new_logprobs: Optional[LogprobsLists] = None
     new_prompt_logprobs_tensors: Optional[LogprobsTensors] = None
+    new_prompt_raw_logprobs_tensors: Optional[torch.Tensor] = None
 
     pooling_output: Optional[torch.Tensor] = None
 

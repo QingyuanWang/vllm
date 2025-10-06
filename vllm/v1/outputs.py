@@ -108,6 +108,9 @@ class ModelRunnerOutput:
     # [num_reqs, hidden_size]
     pooler_output: list[Optional[torch.Tensor]]
 
+    # req_id -> [prompt_len, vocab_size]
+    prompt_raw_logprobs_dict: dict[str, Optional[torch.Tensor]] = None
+
     kv_connector_output: Optional[KVConnectorOutput] = None
 
     # req_id -> num_nans_in_logits

@@ -166,6 +166,8 @@ class SamplingParams(
     response. When set to -1, return all `vocab_size` log probabilities."""
     prompt_logprobs: Optional[int] = None
     """Number of log probabilities to return per prompt token."""
+    prompt_raw_logprobs: Optional[bool] = False
+    """Whether return the raw prompt logprobs."""
     # NOTE: This parameter is only exposed at the engine level for now.
     # It is not exposed in the OpenAI API server, as the OpenAI API does
     # not support returning only a list of token IDs.

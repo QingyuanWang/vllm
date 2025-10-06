@@ -217,9 +217,11 @@ class InputBatch:
         # NOTE(rob): num_prompt_logprobs only includes reqs
         # that are currently in the prefill phase.
         self.num_prompt_logprobs: dict[str, int] = {}
+        self.prompt_raw_logprobs: set[str] = set()
 
         # To accumulate prompt logprobs tensor chunks across prefill steps.
         self.in_progress_prompt_logprobs_cpu: dict[str, LogprobsTensors] = {}
+        self.in_progress_prompt_raw_logprobs_cpu: dict[str, LogprobsTensors] = {}
 
         # Internal representation of per-step batch state changes, used for
         # reordering persistent batch and generating logitsprocs batch state
@@ -357,6 +359,8 @@ class InputBatch:
             if sampling_params.prompt_logprobs is not None:
                 self.num_prompt_logprobs[
                     req_id] = sampling_params.prompt_logprobs
+            if sampling_params.prompt_raw_logprobs:
+                self.prompt_raw_logprobs.add(req_id)
 
             if sampling_params.allowed_token_ids:
                 self.has_allowed_token_ids.add(req_id)
@@ -446,7 +450,9 @@ class InputBatch:
         self.generators.pop(req_index, None)
         self.num_logprobs.pop(req_id, None)
         self.num_prompt_logprobs.pop(req_id, None)
+        self.prompt_raw_logprobs.discard(req_id)
         self.in_progress_prompt_logprobs_cpu.pop(req_id, None)
+        self.in_progress_prompt_raw_logprobs_cpu.pop(req_id, None)
 
         self.has_allowed_token_ids.discard(req_id)
         if self.allowed_token_ids_mask_cpu_tensor is not None:
