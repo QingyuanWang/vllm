@@ -201,6 +201,7 @@ class LogprobsProcessor:
 
     def update_from_output(self, output: EngineCoreOutput, num_cached_tokens:int) -> None:
         self.prompt_raw_logprobs=output.new_prompt_raw_logprobs_tensors
+        self.raw_logprobs=output.new_raw_logprobs
 
         if output.new_logprobs is not None:
             self._update_sample_logprobs(output.new_logprobs)

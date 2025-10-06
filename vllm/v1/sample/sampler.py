@@ -77,9 +77,10 @@ class Sampler(nn.Module):
         # This is different from the V0 sampler, which uses the logits that
         # is used for sampling (after penalties and temperature scaling).
         num_logprobs = sampling_metadata.max_num_logprobs
+        raw_logprobs_ret = self.compute_logprobs(logits)
         if num_logprobs is not None:
             if self.logprobs_mode == LogprobsMode.RAW_LOGPROBS:
-                raw_logprobs = self.compute_logprobs(logits)
+                raw_logprobs = raw_logprobs_ret
             elif self.logprobs_mode == LogprobsMode.RAW_LOGITS:
                 raw_logprobs = logits.clone()
 
@@ -122,6 +123,7 @@ class Sampler(nn.Module):
             # token per request.
             sampled_token_ids=sampled.unsqueeze(-1),
             logprobs_tensors=logprobs_tensors,
+            raw_logprobs=raw_logprobs_ret,
         )
         return sampler_output
 

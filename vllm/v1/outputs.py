@@ -69,6 +69,7 @@ class SamplerOutput:
     # PLACEHOLDER_TOKEN_ID (-1 by default) is used for padding.
     sampled_token_ids: torch.Tensor
     logprobs_tensors: Optional[LogprobsTensors]
+    raw_logprobs: torch.Tensor
 
 
 @dataclass
@@ -107,6 +108,9 @@ class ModelRunnerOutput:
 
     # [num_reqs, hidden_size]
     pooler_output: list[Optional[torch.Tensor]]
+
+    # [num_reqs, vocab_size]
+    raw_logprobs: Optional[torch.Tensor] = None
 
     # req_id -> [prompt_len, vocab_size]
     prompt_raw_logprobs_dict: dict[str, Optional[torch.Tensor]] = None

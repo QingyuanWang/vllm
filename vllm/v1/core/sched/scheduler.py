@@ -832,6 +832,7 @@ class Scheduler(SchedulerInterface):
     ) -> dict[int, EngineCoreOutputs]:
         sampled_token_ids = model_runner_output.sampled_token_ids
         logprobs = model_runner_output.logprobs
+        raw_logprobs = model_runner_output.raw_logprobs
         prompt_logprobs_dict = model_runner_output.prompt_logprobs_dict
         prompt_raw_logprobs_dict = model_runner_output.prompt_raw_logprobs_dict
         num_scheduled_tokens = scheduler_output.num_scheduled_tokens
@@ -878,6 +879,7 @@ class Scheduler(SchedulerInterface):
 
             stopped = False
             new_logprobs = None
+            new_raw_logprobs = None
             new_token_ids = generated_token_ids
             kv_transfer_params = None
             status_before_stop = request.status
@@ -908,6 +910,12 @@ class Scheduler(SchedulerInterface):
                 # the outer lists can be of length > 1.
                 new_logprobs = logprobs.slice(req_index, req_index + 1)
 
+            if request.sampling_params is not None \
+                and request.sampling_params.raw_logprobs and raw_logprobs is not None:
+                # NOTE: once we support N tokens per step (spec decode),
+                # the outer lists can be of length > 1.
+                new_raw_logprobs = raw_logprobs[req_index]
+
             if new_token_ids and self.structured_output_manager.should_advance(
                     request):
                 # NOTE: structured_output_request
@@ -932,6 +940,7 @@ class Scheduler(SchedulerInterface):
                         new_token_ids=new_token_ids,
                         finish_reason=request.get_finished_reason(),
                         new_logprobs=new_logprobs,
+                        new_raw_logprobs=new_raw_logprobs,
                         new_prompt_logprobs_tensors=prompt_logprobs_tensors,
                         new_prompt_raw_logprobs_tensors=prompt_raw_logprobs_tensors,
                         pooling_output=pooler_output,

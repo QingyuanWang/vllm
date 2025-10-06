@@ -109,6 +109,8 @@ class RequestOutput:
         prompt_token_ids: Optional[list[int]],
         prompt_logprobs: Optional[PromptLogprobs],
         prompt_raw_logprobs: Optional[torch.Tensor],
+        raw_logprobs: Optional[torch.Tensor],
+        
         outputs: list[CompletionOutput],
         finished: bool,
         metrics: Optional[RequestMetrics] = None,
@@ -132,6 +134,7 @@ class RequestOutput:
         self.multi_modal_placeholders = multi_modal_placeholders or {}
         self.prompt_logprobs = prompt_logprobs
         self.prompt_raw_logprobs = prompt_raw_logprobs
+        self.raw_logprobs = raw_logprobs
         self.outputs = outputs
         self.finished = finished
         self.metrics = metrics
@@ -342,6 +345,7 @@ class RequestOutput:
                 f"prompt_token_ids={self.prompt_token_ids}, "
                 f"encoder_prompt={self.encoder_prompt!r}, "
                 f"encoder_prompt_token_ids={self.encoder_prompt_token_ids}, "
+                f"raw_logprobs={self.raw_logprobs}, "
                 f"prompt_logprobs={self.prompt_logprobs}, "
                 f"prompt_raw_logprobs={self.prompt_raw_logprobs}, "
                 f"outputs={self.outputs}, "
