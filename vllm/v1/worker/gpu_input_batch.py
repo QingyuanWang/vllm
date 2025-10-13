@@ -221,7 +221,7 @@ class InputBatch:
 
         # To accumulate prompt logprobs tensor chunks across prefill steps.
         self.in_progress_prompt_logprobs_cpu: dict[str, LogprobsTensors] = {}
-        self.in_progress_prompt_raw_logprobs_cpu: dict[str, LogprobsTensors] = {}
+        self.in_progress_prompt_raw_logprobs_cpu: dict[str, list] = {}
 
         # Internal representation of per-step batch state changes, used for
         # reordering persistent batch and generating logitsprocs batch state

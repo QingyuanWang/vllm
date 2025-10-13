@@ -2157,16 +2157,12 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
             request = self.requests[req_id]
             num_prompt_tokens = len(request.prompt_token_ids)
 
-            logprobs_tensors = in_progress_dict.get(req_id)
-            if not logprobs_tensors:
-                # Create empty logprobs CPU tensors for the entire prompt.
-                # If chunked, we'll copy in slice by slice.
-                logprobs_tensors =  torch.zeros(
-                    (num_prompt_tokens - 1, self.model_config.get_vocab_size()),
-                    dtype=torch.float32,
-                    device="cpu")
-                in_progress_dict[req_id] = logprobs_tensors
-                
+            logprobs_list = in_progress_dict.get(req_id)
+            if not logprobs_list:
+                # Create empty list for the entire prompt.
+                # If chunked, we'll process slice by slice then cat.
+                logprobs_list = []
+                in_progress_dict[req_id] = logprobs_list
             # Determine number of logits to retrieve.
             start_idx = request.num_computed_tokens
             start_tok = start_idx + 1
@@ -2181,7 +2177,6 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
                 # This is the last chunk of prompt tokens to return.
                 num_logits = num_remaining_tokens
                 completed_prefill_reqs.append(req_id)
-                prompt_logprobs_dict[req_id] = logprobs_tensors
 
             if num_logits <= 0:
                 # This can happen for the final chunk if we prefilled exactly
@@ -2205,13 +2200,15 @@ class GPUModelRunner(LoRAModelRunnerMixin, KVConnectorModelRunnerMixin):
             logprobs = self.sampler.compute_logprobs(logits)
 
             # Transfer GPU->CPU async.
-            chunk_slice = slice(start_idx, start_idx + num_logits)
-            logprobs_tensors[chunk_slice].copy_(
-                logprobs, non_blocking=True)
+            logprobs_list.append(logprobs.to('cpu',non_blocking=True))
             
         # Remove requests that have completed prefill from the batch
         # num_prompt_logprobs_dict.
         for req_id in completed_prefill_reqs:
+            if in_progress_dict[req_id]:
+                prompt_logprobs_dict[req_id] = torch.cat(in_progress_dict[req_id], dim=0)
+            else:
+                prompt_logprobs_dict[req_id] = None
             prompt_raw_logprobs_set.discard(req_id)
             del in_progress_dict[req_id]
 
